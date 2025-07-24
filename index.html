@@ -6,135 +6,329 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Using Ethers.js v5.7.2 -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <!-- QRCode.js for QR Code generation -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <!-- Font Awesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <!-- Google Fonts: Fira Code for monospace and Inter for general text -->
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: monospace;
-      background: #111;
-      color: #0f0;
-      padding: 20px;
+      font-family: 'Inter', sans-serif; /* Primary font for body */
+      background: #0b0f10; /* Darker background */
+      color: #00ff90; /* Neon green primary color */
+      padding: 30px;
       margin: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
-      min-height: 100vh;
       box-sizing: border-box;
+      min-height: 100vh;
     }
+
     h2 {
-      color: #0f0;
+      font-family: 'Fira Code', monospace; /* Fira Code for headings */
+      color: #00ff90;
+      font-size: 1.8rem;
+      margin-bottom: 30px;
+      text-align: center;
+      text-shadow: 0 0 5px #00ff90; /* Neon glow effect */
+    }
+
+    h3 {
+      font-family: 'Fira Code', monospace;
+      color: #00ffaa;
+      font-size: 1.4rem;
+      margin-top: 0;
       margin-bottom: 20px;
       text-align: center;
+      text-shadow: 0 0 3px #00ffaa;
     }
+
     .container {
       width: 100%;
-      max-width: 650px; /* Slightly wider container for tabs */
-      background: #222;
-      border: 1px solid #333;
+      max-width: 700px; /* Wider container for grid layout */
+      background: #151d1f; /* Dark background for container */
+      border: 1px solid #00ff9099; /* Neon green border */
       border-radius: 10px;
-      padding: 20px;
-      box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+      padding: 25px;
+      box-shadow: 0 0 20px rgba(0, 255, 144, 0.4); /* Stronger neon glow */
+      margin-bottom: 25px; /* Space before footer */
     }
     .tabs {
       display: flex;
       margin-bottom: 20px;
-      border-bottom: 1px solid #0f0;
+      border-bottom: 1px solid #00ff90;
     }
     .tab-button {
       flex: 1;
-      padding: 10px 15px;
-      background: #333;
-      color: #0f0;
+      padding: 12px 15px;
+      background: #252d2f; /* Slightly lighter tab background */
+      color: #00ff90;
       border: none;
       border-top-left-radius: 8px;
       border-top-right-radius: 8px;
       cursor: pointer;
       font-weight: bold;
-      transition: background-color 0.3s ease;
+      transition: all 0.2s ease;
+      font-family: 'Fira Code', monospace;
+      text-shadow: 0 0 2px #00ff90;
     }
     .tab-button.active {
-      background: #0f0;
+      background: #00ff90;
       color: #000;
+      box-shadow: 0 -2px 8px rgba(0, 255, 144, 0.6);
+      transform: translateY(-2px);
     }
     .tab-button:hover:not(.active) {
-      background: #444;
+      background: #353d3f;
+      color: #00ffcc;
     }
     .tab-content {
       display: none;
+      padding-top: 15px;
     }
     .tab-content.active {
       display: block;
     }
-    div.input-group { /* Specific class for input groups */
-      width: 100%;
-      margin-bottom: 15px;
+
+    /* Grid Layout for inputs */
+    .grid {
+      display: grid;
+      gap: 18px; /* Increased gap */
+      grid-template-columns: 1fr; /* Default to single column for mobile */
     }
+
+    @media (min-width: 600px) { /* Adjust breakpoint for two columns */
+      .grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      /* Make specific elements span full width in grid */
+      .grid .span-2 {
+        grid-column: span 2;
+      }
+    }
+
     label {
-      display: block;
       margin-bottom: 5px;
-      color: #0f0;
+      display: block;
+      font-size: 0.95em;
+      color: #00ffaa; /* Brighter neon green for labels */
     }
+
     input[type="text"],
     input[type="number"],
     input[type="password"],
     textarea,
     select {
       width: 100%;
-      background: #1a1a1a;
-      color: #0f0;
-      border: 1px solid #0f0; /* Green border for inputs */
-      padding: 10px;
-      box-sizing: border-box;
-      border-radius: 5px;
-      font-size: 1em;
-    }
-    .checkbox-container {
-      display: flex;
-      align-items: center;
-      margin-top: 10px;
-    }
-    input[type="checkbox"] {
-      margin-right: 10px;
-      transform: scale(1.2);
-    }
-    button {
-      padding: 12px 20px;
-      margin-top: 10px;
-      font-weight: bold;
-      cursor: pointer;
-      background: #0f0;
-      color: #000;
-      border: none;
+      background: #0a0f0f; /* Even darker input background */
+      border: 1px solid #00ff9099;
+      color: #00ff90;
+      padding: 12px;
       border-radius: 8px;
-      transition: background-color 0.3s ease, box-shadow 0.3s ease;
-      box-shadow: 0 4px 6px rgba(0, 255, 0, 0.2);
-      width: 100%;
+      font-size: 0.95em;
+      box-shadow: inset 0 0 5px rgba(0, 255, 144, 0.2); /* Subtle inner glow */
+      transition: border 0.3s ease, box-shadow 0.3s ease;
+      font-family: 'Fira Code', monospace; /* Fira Code for inputs */
     }
+
+    input:focus, textarea:focus, select:focus {
+      border: 1px solid #00ffcc;
+      outline: none;
+      box-shadow: inset 0 0 8px rgba(0, 255, 204, 0.5), 0 0 5px rgba(0, 255, 204, 0.7); /* Stronger focus glow */
+    }
+
+    button {
+      background: linear-gradient(145deg, #00ff90, #00ffaa); /* Gradient for buttons */
+      color: #000;
+      font-weight: bold;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 10px rgba(0, 255, 144, 0.6);
+      font-family: 'Inter', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
     button:hover {
-      background-color: #00cc00;
-      box-shadow: 0 6px 8px rgba(0, 255, 0, 0.3);
+      box-shadow: 0 6px 15px rgba(0, 255, 204, 0.8);
+      transform: translateY(-2px);
     }
+
     button:disabled {
       background: #444;
       color: #888;
       cursor: not-allowed;
       box-shadow: none;
+      transform: translateY(0);
     }
+
     #log {
-      margin-top: 20px;
-      white-space: pre-wrap;
-      background: #000;
+      background: #0a0f0f; /* Dark background for log */
       padding: 15px;
+      border: 1px solid #00ff90;
+      border-radius: 8px;
+      margin-top: 30px;
       height: 300px;
       overflow-y: auto;
       width: 100%;
-      border: 1px solid #0f0;
-      border-radius: 8px;
-      line-height: 1.4;
+      max-width: 700px;
+      white-space: pre-wrap;
+      font-family: 'Fira Code', monospace; /* Fira Code for logs */
       font-size: 0.9em;
+      line-height: 1.4;
+      box-shadow: inset 0 0 8px rgba(0, 255, 144, 0.2);
     }
+
     .log-success { color: #00ff00; }
-    .log-error { color: #ff0000; }
-    .log-info { color: #00ffff; }
-    .log-warning { color: #ffff00; }
+    .log-error { color: #ff5555; }
+    .log-info { color: #00ddff; }
+    .log-warning { color: #ffff66; }
+
+    /* --- Footer Styles --- */
+    .footer {
+        background-color: #0a0a0a; /* Darker black for footer */
+        color: #00ff90; /* Green text */
+        padding: 40px 20px;
+        text-align: center;
+        width: 100%; /* Full width */
+        max-width: 700px; /* Match container width */
+        border-radius: 10px;
+        box-sizing: border-box;
+        margin-top: 25px; /* Space above footer */
+        border: 1px solid #00ff9099;
+        box-shadow: 0 0 15px rgba(0, 255, 144, 0.3);
+    }
+    .footer h3 {
+        font-family: 'Fira Code', monospace;
+        font-size: 1.8em;
+        font-weight: bold;
+        margin-bottom: 10px;
+        color: #00ff90; /* Brighter green for heading */
+        text-shadow: 0 0 5px #00ff90;
+    }
+    .footer p {
+        font-family: 'Inter', sans-serif;
+        font-size: 0.9em;
+        margin-bottom: 20px;
+        color: #00cc00; /* Slightly darker green for paragraph */
+    }
+    .donation-box {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #1a1a1a; /* Darker background for address box */
+        padding: 10px;
+        border-radius: 8px;
+        max-width: 400px;
+        margin: 0 auto 25px auto;
+        border: 1px solid #00ff90; /* Green border */
+        box-shadow: inset 0 0 5px rgba(0, 255, 144, 0.2);
+    }
+    .donation-address-text {
+        font-size: 0.85em;
+        font-family: 'Fira Code', monospace;
+        word-break: break-all;
+        margin-right: 10px;
+        color: #00ddff; /* Cyan for address */
+    }
+    .footer-icon-button {
+        background: none;
+        border: none;
+        color: #00ff90; /* Green for icons */
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 5px;
+        transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    .footer-icon-button:hover {
+        background-color: #333;
+        color: #00ddff; /* Cyan on hover */
+    }
+    .footer-social-links {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 25px;
+        gap: 20px;
+    }
+    .footer-social-links a {
+        color: #00ff90;
+        font-size: 1.5em;
+        transition: color 0.3s ease;
+    }
+    .footer-social-links a:hover {
+        color: #00ddff; /* Cyan on hover */
+    }
+    .footer-copyright {
+        font-size: 0.8em;
+        color: #00cc00;
+        margin-top: 20px;
+    }
+
+    /* --- Modal Styles --- */
+    .modal {
+        position: fixed;
+        z-index: 100;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.8); /* Darker overlay */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-content {
+        background-color: #151d1f; /* Dark background */
+        margin: auto;
+        padding: 25px;
+        border: 1px solid #00ff90; /* Green border */
+        width: 90%;
+        max-width: 450px; /* Slightly larger modal */
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0,255,144,0.6); /* Green glow */
+        position: relative;
+        text-align: center;
+        color: #00ff90;
+    }
+    .close-qr-button {
+        color: #00ff90;
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: color 0.2s ease;
+    }
+    .close-qr-button:hover,
+    .close-qr-button:focus {
+        color: #00ddff; /* Cyan on hover */
+    }
+    #qr-code-container {
+        padding: 10px;
+        background-color: #ffffff; /* QR code itself needs white background */
+        display: inline-block;
+        border-radius: 5px;
+        margin-top: 15px;
+        box-shadow: 0 0 10px rgba(0, 255, 144, 0.3);
+    }
+    #qr-address-display {
+        font-family: 'Fira Code', monospace;
+        font-size: 0.85em;
+        margin-top: 15px;
+        word-break: break-all;
+        color: #00ddff; /* Cyan for address */
+    }
+    .hidden {
+        display: none !important;
+    }
   </style>
 </head>
 <body>
@@ -150,74 +344,151 @@
     <div id="bot-tab" class="tab-content active">
       <h3>Counter Farming Bot (Pro Edition)</h3>
 
-      <div class="input-group">
-        <label for="bot-rpc">🔗 Base RPC URL</label>
-        <input id="bot-rpc" type="text" value="https://base.llamarpc.com" />
-      </div>
+      <div class="grid">
+        <div class="input-group">
+          <label for="bot-chain">🔗 Select Chain</label>
+          <select id="bot-chain">
+            <option value="base">Base Mainnet</option>
+            <option value="linea">Linea Mainnet</option>
+            <option value="scroll">Scroll Mainnet</option>
+            <option value="sepolia">Sepolia Testnet</option>
+          </select>
+        </div>
 
-      <div class="input-group">
-        <label for="bot-contract">📦 Counter Contract Address</label>
-        <input id="bot-contract" type="text" placeholder="0xYourDeployedCounterAddress" />
-      </div>
+        <div class="input-group">
+          <label for="bot-rpc">🌐 RPC URL (auto-filled by chain)</label>
+          <input id="bot-rpc" type="text" value="https://base.llamarpc.com" />
+        </div>
 
-      <div class="input-group">
-        <label for="bot-keys">🔐 Private Keys (one per line)</label>
-        <textarea id="bot-keys" rows="5" placeholder="0xabc123...\n0xdef456..."></textarea>
-      </div>
+        <div class="input-group span-2">
+          <label for="bot-contract">📦 Counter Contract Address</label>
+          <input id="bot-contract" type="text" placeholder="0xYourDeployedCounterAddress" />
+        </div>
 
-      <div class="input-group">
-        <label for="bot-maxRetries">🔄 Max Retries on Fail</label>
-        <input type="number" id="bot-maxRetries" value="1" min="0" />
-      </div>
+        <div class="input-group span-2">
+          <label for="bot-keys">🔐 Private Keys (one per line, optional #nickname)</label>
+          <textarea id="bot-keys" rows="5" placeholder="0xabc123...\n0xdef456...#myWallet"></textarea>
+        </div>
 
-      <div class="input-group">
-        <label for="bot-retryDelay">⏳ Retry Delay (ms)</label>
-        <input type="number" id="bot-retryDelay" value="5000" min="500" />
-      </div>
+        <div class="input-group">
+          <label for="bot-maxRetries">🔄 Max Retries on Fail</label>
+          <input type="number" id="bot-maxRetries" value="1" min="0" />
+        </div>
 
-      <div class="input-group">
-        <label for="bot-mode">🎯 Action Type</label>
-        <select id="bot-mode">
-          <option value="random">Random (inc/dec)</option>
-          <option value="increment">Force Increment</option>
-          <option value="decrement">Force Decrement</option>
-        </select>
-      </div>
+        <div class="input-group">
+          <label for="bot-retryDelay">⏳ Retry Delay (ms)</label>
+          <input type="number" id="bot-retryDelay" value="5000" min="500" />
+        </div>
 
-      <div class="input-group">
-        <label for="bot-repeat">🔁 Repeat Mode</label>
-        <select id="bot-repeat">
-          <option value="no">Run Once</option>
-          <option value="yes">Loop Forever</option>
-        </select>
-      </div>
+        <div class="input-group">
+          <label for="bot-maxGasPriceGwei">⛽ Max Gas Price (Gwei, 0 for no limit)</label>
+          <input type="number" id="bot-maxGasPriceGwei" value="100" min="0" />
+        </div>
+
+        <div class="input-group">
+          <label for="bot-walletsPerCycle">🔄 Wallets per Cycle (0 for all)</label>
+          <input type="number" id="bot-walletsPerCycle" value="0" min="0" />
+        </div>
+
+        <div class="input-group">
+          <label for="bot-mode">🎯 Action Type</label>
+          <select id="bot-mode">
+            <option value="random">Random (inc/dec)</option>
+            <option value="increment">Force Increment</option>
+            <option value="decrement">Force Decrement</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label for="bot-repeat">🔁 Repeat Mode</label>
+          <select id="bot-repeat">
+            <option value="no">Run Once</option>
+            <option value="yes">Loop Forever</option>
+          </select>
+        </div>
+      </div> <!-- End grid -->
 
       <button id="bot-startButton" onclick="startFarmingBot()">🚀 Start Bot</button>
       <button id="bot-stopButton" onclick="stopFarmingBot()" disabled>⏹️ Stop Bot</button>
+      <button id="bot-downloadGasReport" onclick="downloadGasReportCsv()">⬇️ Download Gas Report (CSV)</button>
     </div>
 
     <div id="deployer-tab" class="tab-content">
       <h3>Deploy Counter Contract</h3>
 
-      <div class="input-group">
-        <label for="deployer-pk">🔐 Private Key (never leaves browser)</label>
-        <input type="password" id="deployer-pk" placeholder="0x...">
-      </div>
+      <div class="grid">
+        <div class="input-group">
+          <label for="deployer-chain">🔗 Select Chain</label>
+          <select id="deployer-chain">
+            <option value="base">Base Mainnet</option>
+            <option value="linea">Linea Mainnet</option>
+            <option value="scroll">Scroll Mainnet</option>
+            <option value="sepolia">Sepolia Testnet</option>
+          </select>
+        </div>
 
-      <div class="input-group">
-        <label for="deployer-rpc">🌐 Base RPC URL</label>
-        <input id="deployer-rpc" value="https://mainnet.base.org">
-      </div>
+        <div class="input-group">
+          <label for="deployer-rpc">🌐 RPC URL (auto-filled by chain)</label>
+          <input id="deployer-rpc" value="https://mainnet.base.org">
+        </div>
 
-      <div class="input-group">
-        <label for="deployer-apikey">🧪 BaseScan API Key (for manual verification info)</label>
-        <input id="deployer-apikey" placeholder="paste your BaseScan key here">
-      </div>
+        <div class="input-group span-2">
+          <label for="deployer-pk">🔐 Private Key (never leaves browser)</label>
+          <input type="password" id="deployer-pk" placeholder="0x...">
+        </div>
+
+        <div class="input-group span-2">
+          <label for="deployer-apikey">🧪 BaseScan API Key (for manual verification info)</label>
+          <input id="deployer-apikey" placeholder="paste your BaseScan key here">
+        </div>
+      </div> <!-- End grid -->
 
       <button id="deployButton" onclick="startDeployer()">🚀 Deploy Counter Contract</button>
     </div>
 
     <pre id="log">Logs:\n</pre>
+  </div>
+
+  <!-- UPDATED FOOTER SECTION -->
+  <footer class="footer">
+      <h3>We Grow Together!</h3>
+      <p>
+          Your contributions help keep this project alive, ad-free, and continuously improving. Consider supporting our development efforts by donating.
+      </p>
+      <div class="donation-box">
+          <span id="donation-address" class="donation-address-text">0x1C46ccEA4D62d3eEC4DCE3501aa96d0Ff5FcA954</span>
+          <button id="copy-address-btn" class="footer-icon-button" title="Copy Address">
+              <i class="fas fa-clipboard" id="copy-icon"></i>
+              <i class="fas fa-check" id="check-icon" style="display: none;"></i>
+          </button>
+          <button id="show-qr-btn" class="footer-icon-button" title="Show QR Code">
+              <i class="fas fa-qrcode"></i>
+          </button>
+      </div>
+      <div class="footer-social-links">
+          <a href="https://farm-labs.blogspot.com/" target="_blank" rel="noopener noreferrer" title="Farm Labs Blog">
+              <i class="fab fa-blogger"></i>
+          </a>
+          <a href="https://t.me/farm_lab" target="_blank" rel="noopener noreferrer" title="Farm Lab Telegram">
+              <i class="fab fa-telegram"></i>
+          </a>
+          <a href="https://github.com/CryptoExplor/farmlabs" target="_blank" rel="noopener noreferrer" title="Farm Labs GitHub">
+              <i class="fab fa-github"></i>
+          </a>
+      </div>
+      <p class="footer-copyright">
+          &copy; 2025 FarmLabs. All rights reserved.
+      </p>
+  </footer>
+
+  <!-- QR Code Modal -->
+  <div id="qr-code-modal" class="modal hidden">
+      <div class="modal-content">
+          <span class="close-qr-button">&times;</span>
+          <h3 style="color: #0f0; margin-bottom: 10px;">Donation Address</h3>
+          <div id="qr-code-container"></div>
+          <p id="qr-address-display"></p>
+      </div>
   </div>
 
   <script>
@@ -230,6 +501,34 @@
 
     // Hardcoded Contract Bytecode (from compiling Counter.sol with solidity ^0.8.0, e.g., 0.8.20)
     const counterBytecode = "0x608060405234801561001057600080fd5b5060ae8061001f6000396000f3fe6080604052348015600f575f80fd5b506004361060395760003560e01c80630c7275ed14603e5780632a129cf414605657806377160249146074575b5f80fd5b6044600480360381019080803590602001909291905050506086565b6040518082815260200191505060405180910390f35b6060600480360381019080803590602001909291905050506093565b60626004803603810190808035906020019092919050505060aa565b5f8054905090565b5f8054600101905090565b5f805460019081815260209020900160009081526020600020900101905060ad565b82805460018160011614905550505056fea2646970667358221220a28383e601249b674b88950d9841f3d8f9c065842813583c276f598462ef5e5464736f6c63430008140033";
+
+    // --- Chain Configurations ---
+    const chainConfigs = {
+      base: {
+        rpc: "https://mainnet.base.org",
+        name: "Base Mainnet",
+        etherscanUrl: "https://basescan.org/address/",
+        chainId: 8453
+      },
+      linea: {
+        rpc: "https://rpc.linea.build",
+        name: "Linea Mainnet",
+        etherscanUrl: "https://lineascan.build/address/",
+        chainId: 59144
+      },
+      scroll: {
+        rpc: "https://rpc.scroll.io",
+        name: "Scroll Mainnet",
+        etherscanUrl: "https://scrollscan.com/address/",
+        chainId: 534352
+      },
+      sepolia: {
+        rpc: "https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID", // REMEMBER TO REPLACE THIS
+        name: "Sepolia Testnet",
+        etherscanUrl: "https://sepolia.etherscan.io/address/",
+        chainId: 11155111
+      }
+    };
 
     // --- Global Utility Functions ---
     const log = (msg, type = 'info') => {
@@ -278,6 +577,7 @@
     // --- Counter Bot Logic ---
     let isFarmingBotRunning = false;
     let farmingBotStopFlag = false;
+    let gasReportEntries = []; // Stores data for CSV export
 
     function updateFarmingBotButtonStates(running) {
       document.getElementById("bot-startButton").disabled = running;
@@ -287,8 +587,12 @@
       document.getElementById("bot-keys").disabled = running;
       document.getElementById("bot-maxRetries").disabled = running;
       document.getElementById("bot-retryDelay").disabled = running;
+      document.getElementById("bot-maxGasPriceGwei").disabled = running;
+      document.getElementById("bot-walletsPerCycle").disabled = running;
       document.getElementById("bot-mode").disabled = running;
       document.getElementById("bot-repeat").disabled = running;
+      document.getElementById("bot-chain").disabled = running; // Disable chain select
+      document.getElementById("bot-downloadGasReport").disabled = running || gasReportEntries.length === 0;
     }
 
     function stopFarmingBot() {
@@ -296,13 +600,27 @@
       log("🛑 Stop command received. Finishing current wallet and then stopping farming bot...", 'info');
     }
 
-    async function processFarmingWallet(wallet, contract, action, index, maxRetries, retryDelayMs) {
+    async function processFarmingWallet(wallet, contract, action, index, maxRetries, retryDelayMs, maxGasPriceGwei, chainInfo) {
       const address = wallet.address;
+      const walletLabel = wallet.label ? ` (${wallet.label})` : '';
       let gasUsed = ethers.BigNumber.from(0);
+      let actionStatus = 'Failed'; // Default status for gas report
+      let txHash = 'N/A';
 
       try {
+        // Gas Price Awareness
+        if (maxGasPriceGwei > 0) {
+          const feeData = await wallet.provider.getFeeData();
+          const currentGasPrice = feeData.maxFeePerGas || feeData.gasPrice; // Prefer EIP-1559, fallback to legacy
+          if (currentGasPrice && currentGasPrice.gt(ethers.utils.parseUnits(maxGasPriceGwei.toString(), 'gwei'))) {
+            log(`⛽ Gas price (${ethers.utils.formatUnits(currentGasPrice, 'gwei')} Gwei) too high (> ${maxGasPriceGwei} Gwei). Skipping action for Wallet ${index + 1}${walletLabel}.`, 'warning');
+            actionStatus = 'Skipped (Gas Too High)';
+            return gasUsed; // Return 0 gas used, skip transaction
+          }
+        }
+
         const countBefore = await runWithRetry(() => contract.count(), maxRetries, retryDelayMs);
-        log(`🔍 Wallet ${index + 1} (${address.slice(0, 6)}...${address.slice(-4)}):\n   Current Count: ${countBefore.toString()}`);
+        log(`🔍 Wallet ${index + 1}${walletLabel} (${address.slice(0, 6)}...${address.slice(-4)}):\n   Current Count: ${countBefore.toString()}`);
 
         const estimatedGas = await runWithRetry(() => contract.estimateGas[action](), maxRetries, retryDelayMs);
         log(`⛽ Gas estimate for ${action}: ${estimatedGas.toString()} units`);
@@ -313,16 +631,32 @@
         }
 
         const tx = await runWithRetry(() => contract[action](), maxRetries, retryDelayMs);
-        log(`🚀 TX Sent (${action}): ${tx.hash}`);
+        txHash = tx.hash; // Store tx hash immediately
+        log(`🚀 TX Sent (${action}): ${txHash}`);
 
         const receipt = await runWithRetry(() => tx.wait(), maxRetries, retryDelayMs);
         gasUsed = receipt.gasUsed;
+        actionStatus = 'Success';
 
         const countAfter = await runWithRetry(() => contract.count(), maxRetries, retryDelayMs);
         log(`✅ Confirmed. Updated Count: ${countAfter.toString()} | Gas Used for this TX: ${gasUsed.toString()} units`, 'success');
 
       } catch (err) {
-        log(`❌ Wallet ${index + 1} (${address.slice(0, 6)}...${address.slice(-4)}) error: ${err.message}`, 'error');
+        log(`❌ Wallet ${index + 1}${walletLabel} (${address.slice(0, 6)}...${address.slice(-4)}) error: ${err.message}`, 'error');
+        actionStatus = 'Failed';
+      } finally {
+        // Record for gas report
+        gasReportEntries.push({
+          Timestamp: new Date().toISOString(),
+          WalletAddress: address,
+          WalletLabel: wallet.label || '',
+          Action: action,
+          GasUsed: gasUsed.toString(),
+          Status: actionStatus,
+          ChainName: chainInfo.name,
+          ChainId: chainInfo.chainId,
+          TxHash: txHash
+        });
       }
 
       return gasUsed;
@@ -334,17 +668,26 @@
         return;
       }
 
+      const selectedChainId = document.getElementById("bot-chain").value;
+      const chainInfo = chainConfigs[selectedChainId];
+      if (!chainInfo) {
+        return log("❌ Invalid chain selected.", 'error');
+      }
+
       const rpc = document.getElementById("bot-rpc").value.trim();
       const contractAddress = document.getElementById("bot-contract").value.trim();
-      const keys = document.getElementById("bot-keys").value.trim().split("\n").filter(k => k);
+      const keysInput = document.getElementById("bot-keys").value.trim().split("\n").filter(k => k);
       const maxRetries = parseInt(document.getElementById("bot-maxRetries").value) || 1;
       const retryDelayMs = parseInt(document.getElementById("bot-retryDelay").value) || 5000;
+      const maxGasPriceGwei = parseFloat(document.getElementById("bot-maxGasPriceGwei").value) || 0;
+      const walletsPerCycle = parseInt(document.getElementById("bot-walletsPerCycle").value) || 0;
       const actionMode = document.getElementById("bot-mode").value;
       const repeatMode = document.getElementById("bot-repeat").value === "yes";
 
       document.getElementById("log").textContent = 'Logs:\n'; // Clear logs for new session
+      gasReportEntries = []; // Reset gas report for new session
 
-      if (!rpc || !ethers.utils.isAddress(contractAddress) || keys.length === 0) {
+      if (!rpc || !ethers.utils.isAddress(contractAddress) || keysInput.length === 0) {
         return log("❌ Please ensure RPC URL, a valid Contract Address, and Private Keys are provided for the bot.", 'error');
       }
 
@@ -353,14 +696,20 @@
       updateFarmingBotButtonStates(true);
 
       log("🚀 Starting farming bot interaction...", 'info');
-      log(`Configured with ${keys.length} wallets, Max Retries: ${maxRetries}, Retry Delay: ${retryDelayMs / 1000}s`);
+      log(`Chain: ${chainInfo.name} | RPC: ${rpc}`, 'info');
+      log(`Configured with ${keysInput.length} wallet entries, Max Retries: ${maxRetries}, Retry Delay: ${retryDelayMs / 1000}s`);
+      log(`Max Gas Price: ${maxGasPriceGwei} Gwei | Wallets per Cycle: ${walletsPerCycle === 0 ? 'All' : walletsPerCycle}`);
       log(`Action Type: ${actionMode.charAt(0).toUpperCase() + actionMode.slice(1)} | Repeat Mode: ${repeatMode ? 'Loop Forever' : 'Run Once'}`, 'info');
 
       const provider = new ethers.providers.JsonRpcProvider(rpc);
       const wallets = [];
-      for (const pk of keys) {
+      for (const entry of keysInput) {
+        const parts = entry.split('#');
+        const pk = parts[0].trim();
+        const label = parts[1] ? parts[1].trim() : null;
         try {
-          wallets.push(new ethers.Wallet(pk.trim(), provider));
+          const wallet = new ethers.Wallet(pk, provider);
+          wallets.push({ wallet, label });
         } catch (e) {
           log(`❌ Invalid private key encountered: ${pk.slice(0, 10)}... Skipping this key.`, 'error');
         }
@@ -375,11 +724,14 @@
 
       do {
         let totalGasForCycle = ethers.BigNumber.from(0);
+        const walletsToProcess = walletsPerCycle === 0 ? wallets : wallets.slice(0, walletsPerCycle); // Select N wallets or all
 
-        for (let i = 0; i < wallets.length; i++) {
+        log(`\n--- Starting new cycle (${walletsToProcess.length} wallets to process) ---`, 'info');
+
+        for (let i = 0; i < walletsToProcess.length; i++) {
           if (farmingBotStopFlag) break;
 
-          const wallet = wallets[i];
+          const { wallet, label } = walletsToProcess[i];
           const contract = new ethers.Contract(contractAddress, counterABI, wallet);
           
           let action;
@@ -389,7 +741,7 @@
             action = actionMode;
           }
 
-          const gasUsedByWallet = await processFarmingWallet(wallet, contract, action, i, maxRetries, retryDelayMs);
+          const gasUsedByWallet = await processFarmingWallet(wallet, contract, action, i, maxRetries, retryDelayMs, maxGasPriceGwei, chainInfo);
           totalGasForCycle = totalGasForCycle.add(gasUsedByWallet);
 
           if (farmingBotStopFlag) break;
@@ -407,7 +759,32 @@
       farmingBotStopFlag = false;
       updateFarmingBotButtonStates(false);
       log("\n🎉 All farming operations completed. Bot finished.", 'success');
+      document.getElementById("bot-downloadGasReport").disabled = gasReportEntries.length === 0; // Enable download button if there are entries
     }
+
+    // --- Gas Report Download ---
+    function downloadGasReportCsv() {
+      if (gasReportEntries.length === 0) {
+        log("No gas report data to download.", 'warning');
+        return;
+      }
+
+      const headers = Object.keys(gasReportEntries[0]).join(',');
+      const rows = gasReportEntries.map(entry =>
+        Object.values(entry).map(value => `"${String(value).replace(/"/g, '""')}"`).join(',')
+      );
+
+      const csvContent = headers + '\n' + rows.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `farmlabs_gas_report_${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      log('Gas report downloaded as CSV.', 'info');
+    }
+
 
     // --- Contract Deployer Logic ---
     let isDeploying = false;
@@ -417,12 +794,19 @@
         document.getElementById("deployer-pk").disabled = deploying;
         document.getElementById("deployer-rpc").disabled = deploying;
         document.getElementById("deployer-apikey").disabled = deploying;
+        document.getElementById("deployer-chain").disabled = deploying; // Disable chain select
     }
 
     async function startDeployer() {
       if (isDeploying) {
         log("Deployment already in progress. Please wait...", 'warning');
         return;
+      }
+
+      const selectedChainId = document.getElementById("deployer-chain").value;
+      const chainInfo = chainConfigs[selectedChainId];
+      if (!chainInfo) {
+        return log("❌ Invalid chain selected for deployer.", 'error');
       }
 
       let privateKey = document.getElementById("deployer-pk").value.trim();
@@ -432,7 +816,7 @@
       document.getElementById("log").textContent = 'Logs:\n'; // Clear logs for new session
 
       if (!privateKey || !rpcUrl) {
-        return log("❌ Please fill in Private Key and Base RPC URL for deployment.", 'error');
+        return log("❌ Please fill in Private Key and RPC URL for deployment.", 'error');
       }
       
       if (!privateKey.startsWith('0x') && privateKey.length === 64) {
@@ -449,6 +833,7 @@
       isDeploying = true;
       updateDeployerButtonStates(true);
       log("🚀 Initiating contract deployment...", 'info');
+      log(`Chain: ${chainInfo.name} | RPC: ${rpcUrl}`, 'info');
 
       try {
         const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
@@ -461,7 +846,7 @@
         log(`Wallet balance: ${ethers.utils.formatEther(balance)} ETH`, 'info');
         if (balance.isZero()) {
           log("❌ Wallet has 0 ETH. Please fund your wallet before deploying.", 'error');
-          return; // Exit without finally block
+          return;
         }
 
         const factory = new ethers.ContractFactory(counterABI, counterBytecode, wallet);
@@ -475,13 +860,13 @@
         log(`✅ Contract deployed at: ${contract.address}`, 'success');
 
         log(`\n--- Manual Verification Steps ---`, 'info');
-        log(`To verify your contract on BaseScan, visit:`, 'info');
-        log(`https://basescan.org/address/${contract.address}#code`, 'info');
+        log(`To verify your contract on ${chainInfo.name}'s Explorer, visit:`, 'info');
+        log(`${chainInfo.etherscanUrl}${contract.address}#code`, 'info');
         log(`\nSelect 'Solidity (Single File)' or 'Solidity (Standard-Json)'.`, 'info');
         log(`Set Compiler Version to 'v0.8.20+commit.a1b79de6' (or specific version used to get bytecode).`, 'info');
         log(`Optimization: 'No' (if not optimized, or 'Yes' with runs: 200).`, 'info');
         log(`Paste the exact 'Counter.sol' source code into the text area.`, 'info');
-        log(`\nIf you have a BaseScan API Key (${apiKey ? 'Provided' : 'NOT Provided'}), you could use a backend service or curl to verify programmatically.`, 'info');
+        log(`\nIf you have an API Key for ${chainInfo.name}'s Explorer (${apiKey ? 'Provided' : 'NOT Provided'}), you could use a backend service or curl to verify programmatically.`, 'info');
 
       } catch (err) {
         log(`❌ Deployment failed: ${err.message}`, 'error');
@@ -492,6 +877,100 @@
         document.getElementById("deployer-pk").value = ''; // Clear private key input for security
       }
     }
+
+    // --- Initial Setup and Event Listeners ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize RPC fields based on default chain selection
+        document.getElementById('bot-rpc').value = chainConfigs[document.getElementById('bot-chain').value].rpc;
+        document.getElementById('deployer-rpc').value = chainConfigs[document.getElementById('deployer-chain').value].rpc;
+
+        // Add event listeners for chain selection to update RPC URL
+        document.getElementById('bot-chain').addEventListener('change', (event) => {
+            const selectedChain = event.target.value;
+            document.getElementById('bot-rpc').value = chainConfigs[selectedChain].rpc;
+            log(`Switched bot RPC to ${chainConfigs[selectedChain].name}: ${chainConfigs[selectedChain].rpc}`, 'info');
+        });
+
+        document.getElementById('deployer-chain').addEventListener('change', (event) => {
+            const selectedChain = event.target.value;
+            document.getElementById('deployer-rpc').value = chainConfigs[selectedChain].rpc;
+            log(`Switched deployer RPC to ${chainConfigs[selectedChain].name}: ${chainConfigs[selectedChain].rpc}`, 'info');
+        });
+
+        // --- Footer Logic (Copied and adapted from advance.html) ---
+        const donationAddressStr = '0x1C46ccEA4D62d3eEC4DCE3501aa96d0Ff5FcA954';
+        const copyBtn = document.getElementById('copy-address-btn');
+        const copyIcon = document.getElementById('copy-icon');
+        const checkIcon = document.getElementById('check-icon');
+        const showQrBtn = document.getElementById('show-qr-btn');
+        const qrModal = document.getElementById('qr-code-modal');
+        const closeQrModalBtn = qrModal.querySelector('.close-qr-button');
+        const qrCodeContainer = document.getElementById('qr-code-container');
+        const qrAddressDisplay = document.getElementById('qr-address-display');
+
+        // Ensure checkIcon is hidden initially
+        checkIcon.style.display = 'none';
+
+        // Function to copy text to clipboard (using execCommand for broader iframe compatibility)
+        const copyToClipboard = (text) => {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'absolute';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                log(`Copied "${text}" to clipboard.`, 'info');
+            } catch (err) {
+                log('Failed to copy to clipboard (unsupported by browser/iframe).', 'error');
+            }
+            document.body.removeChild(textarea);
+        };
+
+        // Initialize QR Code
+        if(typeof QRCode !== 'undefined') {
+            new QRCode(qrCodeContainer, {
+                text: donationAddressStr,
+                width: 150, /* Slightly smaller for compact modal */
+                height: 150,
+                colorDark : "#000000", /* Black QR code */
+                colorLight : "#ffffff", /* White background */
+                correctLevel : QRCode.CorrectLevel.H
+            });
+            qrAddressDisplay.textContent = donationAddressStr;
+        } else {
+            console.error("QRCode library is not loaded.")
+            qrCodeContainer.innerHTML = "QR Code library failed to load. Please check your connection.";
+        }
+
+        // Footer Event Listeners
+        copyBtn.addEventListener('click', () => {
+            copyToClipboard(donationAddressStr);
+            copyIcon.style.display = 'none';
+            checkIcon.style.display = 'inline-block';
+            setTimeout(() => {
+                copyIcon.style.display = 'inline-block';
+                checkIcon.style.display = 'none';
+            }, 2000);
+        });
+
+        showQrBtn.addEventListener('click', () => {
+            qrModal.classList.remove('hidden');
+        });
+
+        const closeQrModal = () => {
+            qrModal.classList.add('hidden');
+        }
+        closeQrModalBtn.addEventListener('click', closeQrModal);
+        // The window click listener is for clicks *outside* the modal content
+        window.addEventListener('click', (event) => {
+            // Ensure the click is on the modal background itself, not its content
+            if (event.target === qrModal) {
+                closeQrModal();
+            }
+        });
+    });
   </script>
 
 </body>
