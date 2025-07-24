@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FarmLabs Counter Bot - Stealth Farming Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Base styles from the main app for consistency */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f10; /* Darker background */
+            color: #00ff90; /* Neon green primary color */
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-sizing: border-box;
+            min-height: 100vh;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: 'Fira Code', monospace;
+            color: #00ff90;
+            text-shadow: 0 0 5px #00ff90;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 10rem;
+            font-weight: 1500;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h2 {
+            font-size: 2.2rem;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        h3 {
+            font-size: 1.8rem;
+            text-align: center;
+            margin-bottom: 1rem;
+            color: #00ffaa;
+            text-shadow: 0 0 3px #00ffaa;
+        }
+
+        p {
+            font-family: 'Inter', sans-serif;
+            color: #00cc00;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .section {
+            width: 100%;
+            max-width: 900px; /* Wider for landing page content */
+            padding: 40px 20px;
+            margin: 20px auto;
+            background: #151d1f; /* Dark background for sections */
+            border: 1px solid #00ff9099; /* Neon green border */
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 255, 144, 0.4); /* Stronger neon glow */
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        .section:nth-of-type(odd) {
+            background: #10181a; /* Slightly different background for alternating sections */
+        }
+
+        .btn-primary {
+            background: linear-gradient(145deg, #00ff90, #00ffaa); /* Gradient for buttons */
+            color: #000;
+            font-weight: bold;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 10px rgba(0, 255, 144, 0.6);
+            font-family: 'Inter', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-decoration: none; /* For anchor tags */
+            display: inline-block;
+            margin: 10px;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 6px 15px rgba(0, 255, 204, 0.8);
+            transform: translateY(-2px);
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+            text-align: left;
+        }
+
+        .feature-item {
+            background: #0a0f0f;
+            border: 1px solid #00ff9066;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: inset 0 0 5px rgba(0, 255, 144, 0.2);
+        }
+
+        .feature-item h4 {
+            color: #00ffcc;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            text-shadow: none;
+            text-align: left;
+        }
+
+        .feature-item p {
+            font-size: 0.9em;
+            color: #00e676;
+        }
+
+        /* Updated Footer Styles */
+        .footer {
+            width: 100%;
+            border-top: 1px solid rgba(0, 255, 144, 0.1); /* primary/10 equivalent */
+            padding: 24px 32px; /* py-6 md:px-8 */
+            box-sizing: border-box;
+            background-color: #0b0f10; /* Match body background or a slightly darker shade */
+        }
+
+        .footer-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px; /* gap-4 */
+        }
+
+        @media (min-width: 768px) { /* md breakpoint */
+            .footer-container {
+                height: 96px; /* md:h-24 */
+                flex-direction: row;
+            }
+        }
+
+        .footer-text {
+            font-size: 0.875em; /* text-sm */
+            color: #94a3b8; /* muted-foreground equivalent */
+            font-family: 'Inter', sans-serif;
+        }
+
+        .footer-code {
+            font-family: 'Fira Code', monospace; /* font-code */
+        }
+
+        .logo {
+            max-width: 150px; /* Adjust as needed */
+            margin-bottom: 20px;
+            border-radius: 10px; /* Rounded corners for the logo */
+            box-shadow: 0 0 15px rgba(0, 255, 144, 0.6); /* Glow for the logo */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Hero Section -->
+    <section class="section min-h-screen flex flex-col justify-center items-center">
+        <img src="https://d.cess.network/n1/1075188011.png" alt="FarmLabs Logo" class="logo">
+        <h1>FarmLabs Counter Bot</h1>
+        <h2>⚙️ The Ultimate Stealth Farming Engine for EVM Chains</h2>
+        <p class="text-xl mb-8">🌐 Multi-wallet. Gas-aware. Deploy-ready. Fully In-Browser.</p>
+        <a href="farmlabs-all-in-one.html" class="btn-primary">Launch App</a>
+    </section>
+
+    <!-- What It Does Section -->
+    <section class="section">
+        <h3>🧠 What It Does</h3>
+        <p>
+            FarmLabs Counter Bot is a browser-based stealth farming automation suite built for smart contract interaction on chains like Base, Scroll, and Linea.
+        </p>
+        <p>
+            Designed to simulate human-like usage while maximizing TX count, minimizing gas waste, and avoiding Sybil flags.
+        </p>
+    </section>
+
+    <!-- Core Features Section -->
+    <section class="section">
+        <h3>🔁 Core Features</h3>
+        <div class="feature-grid">
+            <div class="feature-item">
+                <h4>🔐 Multi-Wallet Mode</h4>
+                <p>Load and rotate multiple private keys for diverse on-chain activity.</p>
+            </div>
+            <div class="feature-item">
+                <h4>🔁 Action Farming</h4>
+                <p>Execute randomized <code>increment()</code> / <code>decrement()</code> calls on Counter contracts.</p>
+            </div>
+            <div class="feature-item">
+                <h4>⏳ Smart Delays</h4>
+                <p>Inject human-like transaction delays (5s–15s) between operations.</p>
+            </div>
+            <div class="feature-item">
+                <h4>⛽ Gas Guard</h4>
+                <p>Automatically skip transactions if gas price is too high or wallet balance is too low.</p>
+            </div>
+            <div class="feature-item">
+                <h4>🔄 Retry Engine</h4>
+                <p>Automatic retry logic for failed transactions, ensuring robustness.</p>
+            </div>
+            <div class="feature-item">
+                <h4>🧪 Dummy Reads</h4>
+                <p>Randomly perform view calls (e.g., <code>count()</code>) to simulate organic user activity.</p>
+            </div>
+            <div class="feature-item">
+                <h4>🚀 Loop Mode</h4>
+                <p>Option to run farming operations infinitely or for a single cycle per wallet.</p>
+            </div>
+            <div class="feature-item">
+                <h4>📊 Log Console</h4>
+                <p>Real-time status updates and detailed gas usage reports for each wallet.</p>
+            </div>
+            <div class="feature-item">
+                <h4>🧾 CSV Export (optional)</h4>
+                <p>Download a comprehensive report of gas usage and transaction statuses.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Built-In Deployer Section -->
+    <section class="section">
+        <h3>🛠 Built-In Deployer</h3>
+        <p>
+            Easily deploy your <code>Counter.sol</code> contract to any supported EVM chain directly from the browser.
+        </p>
+        <p>
+            Works seamlessly on Base, Scroll, Linea, Sepolia — no command-line interface (CLI) or complex setup required.
+        </p>
+    </section>
+
+    <!-- UI/UX Design Section -->
+    <section class="section">
+        <h3>🎨 UI/UX Design</h3>
+        <p>
+            Experience a sleek, dark neon terminal theme with highly legible Fira Code and Inter fonts.
+            The responsive grid layout ensures optimal usability on any device, complemented by intuitive emoji status indicators.
+        </p>
+    </section>
+
+    <!-- Modular Architecture Section -->
+    <section class="section">
+        <h3>🧩 Modular Architecture</h3>
+        <p>
+            Built with pure HTML and JavaScript, FarmLabs Counter Bot requires no complex build steps and can even run offline.
+            Its modular design makes it easily extendable for adding support for token, NFT, or bridge contracts.
+        </p>
+    </section>
+
+    <!-- Open Source Section -->
+    <section class="section">
+        <h3>💾 Open Source</h3>
+        <p>
+            FarmLabs Counter Bot is 100% client-side, ensuring your private keys never leave your browser.
+            It's MIT Licensed, and contributions from the community are always welcome!
+        </p>
+        <a href="https://github.com/CryptoExplor/CounterBot" target="_blank" rel="noopener noreferrer" class="btn-primary">View Source on GitHub</a>
+    </section>
+
+    <!-- Call to Action Section -->
+    <section class="section">
+        <h3>Ready to Optimize Your Farming?</h3>
+        <a href="farmlabs-all-in-one.html" class="btn-primary">Launch Bot UI</a>
+        <a href="farmlabs-all-in-one.html" class="btn-primary">Deploy Contract</a>
+    </section>
+
+    <!-- Footer Section -->
+    <footer class="footer">
+        <div class="footer-container">
+            <p class="footer-text">
+                &copy; <span id="current-year"></span> FarmLabs. All rights reserved. 
+            </p>
+            <p class="footer-text footer-code">
+                FarmLabs Branding & UI by Ravi
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // Set current year dynamically for the footer
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+    </script>
+
+</body>
+</html>
