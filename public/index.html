@@ -684,6 +684,7 @@ contract Counter {
       }
 
       currentGasDisplay.textContent = "Current: Fetching...";
+      log(`Fetching current gas price from: ${rpcUrl}`, 'info'); // Log the RPC being used
       try {
         const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
         const feeData = await provider.getFeeData();
