@@ -329,6 +329,14 @@
     .hidden {
         display: none !important;
     }
+
+    /* Style for live gas display */
+    .gas-display {
+      font-size: 0.85em;
+      color: #00ddff; /* Cyan color for info */
+      margin-top: 5px;
+      display: block; /* Ensure it takes its own line */
+    }
   </style>
 </head>
 <body>
@@ -384,7 +392,11 @@
 
         <div class="input-group">
           <label for="bot-maxGasPriceGwei">⛽ Max Gas Price (Gwei, 0 for no limit)</label>
-          <input type="number" id="bot-maxGasPriceGwei" value="100" min="0" />
+          <input type="number" id="bot-maxGasPriceGwei" value="1" min="0" />
+        </div>
+        <div class="input-group">
+          <label for="bot-maxTxCostEth">💰 Max TX Cost (ETH, 0 for no limit)</label>
+          <input type="number" id="bot-maxTxCostEth" value="0.005" min="0" step="0.0001" />
         </div>
 
         <div class="input-group">
@@ -441,13 +453,20 @@
           <input type="password" id="deployer-pk" placeholder="0x...">
         </div>
 
-        <div class="input-group span-2">
-          <label for="deployer-apikey">🧪 BaseScan API Key (for manual verification info)</label>
-          <input id="deployer-apikey" placeholder="paste your BaseScan key here">
+        <div class="input-group">
+          <label for="deployer-maxGasPriceGwei">⛽ Max Gas Price (Gwei, 0 for no limit)</label>
+          <input type="number" id="deployer-maxGasPriceGwei" value="1" min="0" />
+          <span id="deployer-current-gas" class="gas-display">Current: Fetching...</span>
+        </div>
+
+        <div class="input-group">
+          <label for="deployer-apikey">🧪 Backend Verifier API Key (Optional)</label>
+          <input id="deployer-apikey" placeholder="Used by backend for verification">
         </div>
       </div> <!-- End grid -->
 
       <button id="deployButton" onclick="startDeployer()">🚀 Deploy Counter Contract</button>
+      <button id="verifyButton" onclick="autoVerifyContract()" disabled>✅ Auto Verify Contract</button>
     </div>
 
     <pre id="log">Logs:\n</pre>
@@ -496,15 +515,36 @@
   </div>
 
   <script>
-    // --- Global Contract Data ---
-    const counterABI = [
-      { "inputs": [], "name": "count", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
-      { "inputs": [], "name": "decrement", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
-      { "inputs": [], "name": "increment", "outputs": [], "stateMutability": "nonpayable", "type": "function" }
-    ];
+    // --- Global Contract Data (will be loaded from counterCompiled.json) ---
+    let counterABI = [];
+    let counterBytecode = '';
+    let counterSourceCode = `// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
 
-    // Hardcoded Contract Bytecode (from compiling Counter.sol with solidity ^0.8.0, e.g., 0.8.20)
-    const counterBytecode = "0x608060405234801561001057600080fd5b5060ae8061001f6000396000f3fe6080604052348015600f575f80fd5b506004361060395760003560e01c80630c7275ed14603e5780632a129cf414605657806377160249146074575b5f80fd5b6044600480360381019080803590602001909291905050506086565b6040518082815260200191505060405180910390f35b6060600480360381019080803590602001909291905050506093565b60626004803603810190808035906020019092919050505060aa565b5f8054905090565b5f8054600101905090565b5f805460019081815260209020900160009081526020600020900101905060ad565b82805460018160011614905550505056fea2646970667358221220a28383e601249b674b88950d9841f3d8f9c065842813583c276f598462ef5e5464736f6c63430008140033";
+contract Counter {
+    uint256 private _count;
+
+    function count() public view returns (uint256) {
+        return _count;
+    }
+
+    function increment() public {
+        _count += 1;
+    }
+
+    function decrement() public {
+        require(_count > 0, "Counter: already at zero");
+        _count -= 1;
+    }
+}`; // Source code for verification
+    let counterCompilerVersion = 'v0.8.20+commit.a1b79de6'; // Default, will be updated from JSON
+    let counterOptimizationUsed = 0; // Default, will be updated from JSON
+    let counterRuns = 200; // Default, will be updated from JSON
+    let deployedContractAddress = ''; // To store the address after deployment for verification
+
+    // --- Backend Verifier URL ---
+    // IMPORTANT: Replace this with the actual URL of your deployed Cloudflare Worker
+    const VERIFIER_BACKEND_URL = 'YOUR_VERIFIER_WORKER_URL_HERE'; // e.g., 'https://your-worker-name.your-username.workers.dev/verify'
 
     // --- Chain Configurations ---
     const chainConfigs = {
@@ -519,26 +559,34 @@
           // "https://base.gateway.tenderly.co" // Uncomment if you have a Tenderly gateway
         ],
         name: "Base Mainnet",
-        etherscanUrl: "https://basescan.org/address/",
-        chainId: 8453
+        etherscanApiUrl: "https://api.basescan.org/api", // Etherscan API URL
+        browserUrl: "https://basescan.org/address/",
+        chainId: 8453,
+        etherscanApiKey: "X83R8MW5FKH3VM4DR5DY659VZRSTCGHYI5" // Your provided API key
       },
       linea: {
         rpcs: ["https://rpc.linea.build"],
         name: "Linea Mainnet",
-        etherscanUrl: "https://lineascan.build/address/",
-        chainId: 59144
+        etherscanApiUrl: "https://api.lineascan.build/api",
+        browserUrl: "https://lineascan.build/address/",
+        chainId: 59144,
+        etherscanApiKey: "X83R8MW5FKH3VM4DR5DY659VZRSTCGHYI5" // Your provided API key
       },
       scroll: {
         rpcs: ["https://rpc.scroll.io"],
         name: "Scroll Mainnet",
-        etherscanUrl: "https://scrollscan.com/address/",
-        chainId: 534352
+        etherscanApiUrl: "https://api.scrollscan.com/api",
+        browserUrl: "https://scrollscan.com/address/",
+        chainId: 534352,
+        etherscanApiKey: "X83R8MW5FKH3VM4DR5DY659VZRSTCGHYI5" // Your provided API key
       },
       sepolia: {
         rpcs: ["https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID"], // REMEMBER TO REPLACE THIS WITH YOUR ACTUAL INFURA PROJECT ID
         name: "Sepolia Testnet",
-        etherscanUrl: "https://sepolia.etherscan.io/address/",
-        chainId: 11155111
+        etherscanApiUrl: "https://api-sepolia.etherscan.io/api",
+        browserUrl: "https://sepolia.etherscan.io/address/",
+        chainId: 11155111,
+        etherscanApiKey: "X83R8MW5FKH3VM4DR5DY659VZRSTCGHYI5" // Your provided API key
       }
     };
 
@@ -584,6 +632,11 @@
       document.getElementById(tabId).classList.add('active');
       event.currentTarget.classList.add('active'); // Set clicked button as active
       document.getElementById("log").textContent = 'Logs:\n'; // Clear log on tab switch
+
+      // If switching to deployer tab, fetch gas price
+      if (tabId === 'deployer-tab') {
+        fetchAndDisplayDeployerGasPrice();
+      }
     }
 
     // --- RPC Dropdown Update Logic ---
@@ -606,13 +659,102 @@
         rpcSelect.appendChild(option);
       });
 
-      // Set the hidden input value to the first RPC by default
+      // Set the hidden input value to the first RPC by default and trigger change
       if (rpcsForChain.length > 0) {
+        rpcSelect.value = rpcsForChain[0];
         rpcHiddenInput.value = rpcsForChain[0];
       } else {
         rpcHiddenInput.value = '';
       }
+
+      // If this is the deployer tab, update gas price display
+      if (tabPrefix === 'deployer') {
+        fetchAndDisplayDeployerGasPrice();
+      }
     }
+
+    // --- Fetch and Display Deployer Gas Price ---
+    async function fetchAndDisplayDeployerGasPrice() {
+      const rpcUrl = document.getElementById("deployer-rpc-select").value.trim();
+      const currentGasDisplay = document.getElementById("deployer-current-gas");
+
+      if (!rpcUrl) {
+        currentGasDisplay.textContent = "Current: N/A (No RPC)";
+        return;
+      }
+
+      currentGasDisplay.textContent = "Current: Fetching...";
+      try {
+        const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+        const feeData = await provider.getFeeData();
+        const gasPrice = feeData.maxFeePerGas || feeData.gasPrice; // Prefer EIP-1559, fallback to legacy
+        if (gasPrice) {
+          const gasPriceGwei = ethers.utils.formatUnits(gasPrice, 'gwei');
+          currentGasDisplay.textContent = `Current: ${parseFloat(gasPriceGwei).toFixed(3)} Gwei`;
+          currentGasDisplay.style.color = '#00ddff'; // Info color
+        } else {
+          currentGasDisplay.textContent = "Current: N/A (No Gas Price)";
+          currentGasDisplay.style.color = '#ffff66'; // Warning color
+        }
+      } catch (error) {
+        currentGasDisplay.textContent = "Current: Error fetching gas";
+        currentGasDisplay.style.color = '#ff5555'; // Error color
+        console.error("Error fetching deployer gas price:", error);
+      }
+    }
+
+    /**
+     * Determines if a transaction should be skipped based on gas price, estimated cost, and wallet balance.
+     * @param {ethers.Wallet} wallet The wallet instance.
+     * @param {ethers.providers.Provider} provider The provider connected to the network.
+     * @param {ethers.BigNumber} estimatedGasLimit The estimated gas limit for the transaction.
+     * @param {number} maxGwei The maximum acceptable gas price in Gwei.
+     * @param {number} maxEth The maximum acceptable total transaction cost in ETH.
+     * @returns {Promise<boolean>} True if the transaction should be skipped, false otherwise.
+     */
+    async function shouldSkipTx(wallet, provider, estimatedGasLimit, maxGwei, maxEth) {
+      try {
+        const feeData = await provider.getFeeData();
+        const balance = await wallet.getBalance();
+
+        const gasPrice = feeData.maxFeePerGas || feeData.gasPrice;
+
+        if (!gasPrice) {
+            log("⚠️ Could not fetch gas price. Skipping transaction.", 'warning');
+            return true;
+        }
+
+        const txCost = gasPrice.mul(estimatedGasLimit);
+
+        // Convert to human-readable ETH/gwei
+        const gwei = parseFloat(ethers.utils.formatUnits(gasPrice, "gwei"));
+        const costEth = parseFloat(ethers.utils.formatEther(txCost));
+        const balanceEth = parseFloat(ethers.utils.formatEther(balance));
+
+        if (maxGwei > 0 && gwei > maxGwei) {
+          log(`⚠️ Gas too high: ${gwei.toFixed(3)} gwei > ${maxGwei} Gwei limit — skipping`, 'warning');
+          return true;
+        }
+
+        if (maxEth > 0 && costEth > maxEth) {
+          log(`⚠️ Tx cost ${costEth.toFixed(6)} ETH > limit ${maxEth} ETH — skipping`, 'warning');
+          return true;
+        }
+
+        // Add a small buffer to the balance check
+        const balanceThreshold = ethers.utils.parseEther(maxEth.toString()).add(ethers.utils.parseEther("0.0001")); // Buffer for potential slight variations
+        if (balance.lt(txCost.add(ethers.utils.parseEther("0.0001")))) { // Check if balance is less than txCost + small buffer
+          log(`⚠️ Wallet low on funds (${balanceEth.toFixed(6)} ETH) for estimated cost ${costEth.toFixed(6)} ETH — skipping`, 'warning');
+          return true;
+        }
+
+        return false;
+      } catch (error) {
+        log(`❌ Error in gas guard check: ${error.message}. Skipping transaction to be safe.`, 'error');
+        return true; // Skip on error to prevent unexpected behavior
+      }
+    }
+
 
     // --- Counter Bot Logic ---
     let isFarmingBotRunning = false;
@@ -628,6 +770,7 @@
       document.getElementById("bot-maxRetries").disabled = running;
       document.getElementById("bot-retryDelay").disabled = running;
       document.getElementById("bot-maxGasPriceGwei").disabled = running;
+      document.getElementById("bot-maxTxCostEth").disabled = running; // Disable max tx cost
       document.getElementById("bot-walletsPerCycle").disabled = running;
       document.getElementById("bot-mode").disabled = running;
       document.getElementById("bot-repeat").disabled = running;
@@ -640,7 +783,7 @@
       log("🛑 Stop command received. Finishing current wallet and then stopping farming bot...", 'info');
     }
 
-    async function processFarmingWallet(wallet, contract, action, index, maxRetries, retryDelayMs, maxGasPriceGwei, chainInfo) {
+    async function processFarmingWallet(wallet, contract, action, index, maxRetries, retryDelayMs, maxGasPriceGwei, maxTxCostEth, chainInfo) {
       const address = wallet.address;
       const walletLabel = wallet.label ? ` (${wallet.label})` : '';
       let gasUsed = ethers.BigNumber.from(0);
@@ -648,22 +791,19 @@
       let txHash = 'N/A';
 
       try {
-        // Gas Price Awareness
-        if (maxGasPriceGwei > 0) {
-          const feeData = await wallet.provider.getFeeData();
-          const currentGasPrice = feeData.maxFeePerGas || feeData.gasPrice; // Prefer EIP-1559, fallback to legacy
-          if (currentGasPrice && currentGasPrice.gt(ethers.utils.parseUnits(maxGasPriceGwei.toString(), 'gwei'))) {
-            log(`⛽ Gas price (${ethers.utils.formatUnits(currentGasPrice, 'gwei')} Gwei) too high (> ${maxGasPriceGwei} Gwei). Skipping action for Wallet ${index + 1}${walletLabel}.`, 'warning');
-            actionStatus = 'Skipped (Gas Too High)';
+        // Estimate gas limit for the specific action
+        const estimatedGasLimit = await runWithRetry(() => contract.estimateGas[action](), maxRetries, retryDelayMs);
+        log(`⛽ Gas estimate for ${action}: ${estimatedGasLimit.toString()} units`);
+
+        // Use the smart gas guard before proceeding
+        const skip = await shouldSkipTx(wallet, wallet.provider, estimatedGasLimit, maxGasPriceGwei, maxTxCostEth);
+        if (skip) {
+            actionStatus = 'Skipped (Gas Guard)';
             return gasUsed; // Return 0 gas used, skip transaction
-          }
         }
 
         const countBefore = await runWithRetry(() => contract.count(), maxRetries, retryDelayMs);
         log(`🔍 Wallet ${index + 1}${walletLabel} (${address.slice(0, 6)}...${address.slice(-4)}):\n   Current Count: ${countBefore.toString()}`);
-
-        const estimatedGas = await runWithRetry(() => contract.estimateGas[action](), maxRetries, retryDelayMs);
-        log(`⛽ Gas estimate for ${action}: ${estimatedGas.toString()} units`);
 
         if (Math.random() < 0.1) { // 10% chance for dummy read
             await runWithRetry(() => contract.count(), maxRetries, retryDelayMs);
@@ -722,6 +862,7 @@
       const maxRetries = parseInt(document.getElementById("bot-maxRetries").value) || 1;
       const retryDelayMs = parseInt(document.getElementById("bot-retryDelay").value) || 5000;
       const maxGasPriceGwei = parseFloat(document.getElementById("bot-maxGasPriceGwei").value) || 0;
+      const maxTxCostEth = parseFloat(document.getElementById("bot-maxTxCostEth").value) || 0; // Get max tx cost
       const walletsPerCycle = parseInt(document.getElementById("bot-walletsPerCycle").value) || 0;
       const actionMode = document.getElementById("bot-mode").value;
       const repeatMode = document.getElementById("bot-repeat").value === "yes";
@@ -740,7 +881,7 @@
       log("🚀 Starting farming bot interaction...", 'info');
       log(`Chain: ${chainInfo.name} | RPC: ${rpc}`, 'info');
       log(`Configured with ${keysInput.length} wallet entries, Max Retries: ${maxRetries}, Retry Delay: ${retryDelayMs / 1000}s`);
-      log(`Max Gas Price: ${maxGasPriceGwei} Gwei | Wallets per Cycle: ${walletsPerCycle === 0 ? 'All' : walletsPerCycle}`);
+      log(`Max Gas Price: ${maxGasPriceGwei} Gwei | Max TX Cost: ${maxTxCostEth} ETH | Wallets per Cycle: ${walletsPerCycle === 0 ? 'All' : walletsPerCycle}`);
       log(`Action Type: ${actionMode.charAt(0).toUpperCase() + actionMode.slice(1)} | Repeat Mode: ${repeatMode ? 'Loop Forever' : 'Run Once'}`, 'info');
 
       const provider = new ethers.providers.JsonRpcProvider(rpc);
@@ -783,7 +924,7 @@
             action = actionMode;
           }
 
-          const gasUsedByWallet = await processFarmingWallet(wallet, contract, action, i, maxRetries, retryDelayMs, maxGasPriceGwei, chainInfo);
+          const gasUsedByWallet = await processFarmingWallet(wallet, contract, action, i, maxRetries, retryDelayMs, maxGasPriceGwei, maxTxCostEth, chainInfo);
           totalGasForCycle = totalGasForCycle.add(gasUsedByWallet);
 
           if (farmingBotStopFlag) break;
@@ -833,10 +974,12 @@
 
     function updateDeployerButtonStates(deploying) {
         document.getElementById("deployButton").disabled = deploying;
+        document.getElementById("verifyButton").disabled = deploying || !deployedContractAddress; // Enable verify only after deployment
         document.getElementById("deployer-pk").disabled = deploying;
         document.getElementById("deployer-rpc-select").disabled = deploying; // Disable RPC select
         document.getElementById("deployer-apikey").disabled = deploying;
         document.getElementById("deployer-chain").disabled = deploying; // Disable chain select
+        document.getElementById("deployer-maxGasPriceGwei").disabled = deploying; // Disable gas price input
     }
 
     async function startDeployer() {
@@ -854,7 +997,10 @@
       let privateKey = document.getElementById("deployer-pk").value.trim();
       // Get RPC URL from the dropdown
       const rpcUrl = document.getElementById("deployer-rpc-select").value.trim();
-      const apiKey = document.getElementById("deployer-apikey").value.trim();
+      // API key is now part of chainInfo, but we keep the input for user to override if needed
+      const apiKey = document.getElementById("deployer-apikey").value.trim() || chainInfo.etherscanApiKey;
+      const maxGasPriceGwei = parseFloat(document.getElementById("deployer-maxGasPriceGwei").value) || 0;
+
 
       document.getElementById("log").textContent = 'Logs:\n'; // Clear logs for new session
 
@@ -882,6 +1028,22 @@
         const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
         const wallet = new ethers.Wallet(privateKey, provider);
 
+        // Estimate gas limit for deployment
+        const factory = new ethers.ContractFactory(counterABI, counterBytecode, wallet);
+        const estimatedGasLimit = await runWithRetry(() => factory.estimateGas.deploy(), 1, 5000); // Deploy is a special case for estimateGas
+        log(`⛽ Estimated gas for deployment: ${estimatedGasLimit.toString()} units`);
+
+        // Use the smart gas guard before proceeding with deployment
+        // For deployment, we don't have a specific maxEth input, but we can use a high default or derive it
+        // For simplicity, we'll just check maxGwei for deployment here.
+        // A more advanced version might have a separate maxEth for deployment.
+        const skip = await shouldSkipTx(wallet, provider, estimatedGasLimit, maxGasPriceGwei, 999999); // High maxEth for deployment check
+        if (skip) {
+            isDeploying = false;
+            updateDeployerButtonStates(false);
+            return;
+        }
+
         log(`Connected to RPC: ${rpcUrl}`, 'info');
         log(`Deployer address: ${wallet.address}`, 'info');
 
@@ -892,24 +1054,22 @@
           return;
         }
 
-        const factory = new ethers.ContractFactory(counterABI, counterBytecode, wallet);
-
         log("📦 Sending deployment transaction...", 'info');
         const contract = await factory.deploy();
         log(`➡️ Deployment TX Hash: ${contract.deployTransaction.hash}`, 'info');
 
         log("⏳ Waiting for transaction to be mined...", 'info');
         await contract.deployed();
-        log(`✅ Contract deployed at: ${contract.address}`, 'success');
+        deployedContractAddress = contract.address; // Store deployed address
+        log(`✅ Contract deployed at: ${deployedContractAddress}`, 'success');
+
+        updateDeployerButtonStates(false); // Re-enable buttons after deployment, including verify
 
         log(`\n--- Manual Verification Steps ---`, 'info');
         log(`To verify your contract on ${chainInfo.name}'s Explorer, visit:`, 'info');
-        log(`${chainInfo.etherscanUrl}${contract.address}#code`, 'info');
-        log(`\nSelect 'Solidity (Single File)' or 'Solidity (Standard-Json)'.`, 'info');
-        log(`Set Compiler Version to 'v0.8.20+commit.a1b79de6' (or specific version used to get bytecode).`, 'info');
-        log(`Optimization: 'No' (if not optimized, or 'Yes' with runs: 200).`, 'info');
-        log(`Paste the exact 'Counter.sol' source code into the text area.`, 'info');
-        log(`\nIf you have an API Key for ${chainInfo.name}'s Explorer (${apiKey ? 'Provided' : 'NOT Provided'}), you could use a backend service or curl to verify programmatically.`, 'info');
+        log(`${chainInfo.browserUrl}${deployedContractAddress}#code`, 'info');
+        log(`\nIf you wish to auto-verify, click the 'Auto Verify Contract' button.`, 'info');
+
 
       } catch (err) {
         log(`❌ Deployment failed: ${err.message}`, 'error');
@@ -921,8 +1081,82 @@
       }
     }
 
+    async function autoVerifyContract() {
+        if (!deployedContractAddress) {
+            log("❌ No contract address found. Please deploy a contract first.", 'error');
+            return;
+        }
+
+        const selectedChainId = document.getElementById("deployer-chain").value;
+        const chainInfo = chainConfigs[selectedChainId];
+        if (!chainInfo) {
+            log("❌ Invalid chain selected for verification.", 'error');
+            return;
+        }
+
+        const etherscanApiKey = document.getElementById("deployer-apikey").value.trim() || chainInfo.etherscanApiKey;
+
+        if (!etherscanApiKey && VERIFIER_BACKEND_URL === 'YOUR_VERIFIER_WORKER_URL_HERE') {
+            log("❌ Please provide an Etherscan API Key or configure the backend verifier URL.", 'error');
+            return;
+        }
+
+        log("⏳ Attempting automatic verification via backend...", 'info');
+
+        try {
+            const response = await fetch(VERIFIER_BACKEND_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contractAddress: deployedContractAddress,
+                    sourceCode: counterSourceCode,
+                    contractName: 'Counter',
+                    compilerVersion: counterCompilerVersion,
+                    optimizationUsed: counterOptimizationUsed,
+                    runs: counterRuns,
+                    chainId: chainInfo.chainId,
+                    etherscanApiKey: etherscanApiKey // Pass API key to backend
+                }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.status === '1') {
+                log(`✅ Verification successful! Check: ${chainInfo.browserUrl}${deployedContractAddress}`, 'success');
+                log(`Verification GUID: ${result.result}`, 'info');
+            } else {
+                log(`❌ Verification failed: ${result.message || JSON.stringify(result)}`, 'error');
+            }
+        } catch (error) {
+            log(`❌ Error during verification request: ${error.message}`, 'error');
+            console.error("Verification error:", error);
+        }
+    }
+
+
     // --- Initial Setup and Event Listeners ---
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Load compiled contract data
+        try {
+            const response = await fetch('counterCompiled.json');
+            if (!response.ok) {
+                throw new Error(`Failed to load counterCompiled.json: ${response.statusText}`);
+            }
+            const compiledData = await response.json();
+            counterABI = compiledData.abi;
+            counterBytecode = compiledData.bytecode;
+            counterCompilerVersion = compiledData.compilerVersion;
+            counterOptimizationUsed = compiledData.optimizationUsed;
+            counterRuns = compiledData.runs;
+            log("✅ Contract ABI and Bytecode loaded from counterCompiled.json", 'success');
+        } catch (error) {
+            log(`❌ Error loading contract data: ${error.message}. Using hardcoded defaults.`, 'error');
+            // Fallback to hardcoded if loading fails
+        }
+
+
         // Initialize RPC dropdowns and hidden inputs
         updateRpcDropdown('bot');
         updateRpcDropdown('deployer');
@@ -939,7 +1173,13 @@
         document.getElementById('deployer-rpc-select').addEventListener('change', (event) => {
             document.getElementById('deployer-rpc').value = event.target.value;
             log(`Deployer RPC set to: ${event.target.value}`, 'info');
+            fetchAndDisplayDeployerGasPrice(); // Fetch gas price when RPC changes
         });
+
+        // Initial fetch of deployer gas price if deployer tab is active
+        if (document.getElementById('deployer-tab').classList.contains('active')) {
+            fetchAndDisplayDeployerGasPrice();
+        }
 
         // --- Footer Logic (Copied and adapted from advance.html) ---
         const donationAddressStr = '0x1C46ccEA4D62d3eEC4DCE3501aa96d0Ff5FcA954';
