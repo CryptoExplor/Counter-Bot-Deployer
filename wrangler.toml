@@ -1,11 +1,36 @@
-name = "index"
-type = "webpack"
+# wrangler.toml for Cloudflare Pages (Frontend)
+name = "farmlabs-frontend" # Name for your Cloudflare Pages project
+type = "webpack" # This type is often used for Pages with static assets
 
 [site]
-bucket = "./public"
-entry-point = "./"
+bucket = "./public" # This specifies that your static assets are in the 'public' directory
+entry-point = "./"  # This tells Cloudflare Pages to serve from the root of the bucket
 
 [build]
-command = ""
+command = "" # No build command needed for a single HTML file and JSON
+# If you later add build steps (e.g., for Tailwind CSS or JavaScript bundling), you would add them here.
 
-compatibility_date = "2025-07-24"
+compatibility_date = "2025-07-24" # Use a recent date for compatibility
+
+
+# wrangler.toml for Cloudflare Worker (Backend Verifier) - Add this as a separate worker entry
+# You will deploy this worker separately from your Pages project.
+# You can give it a different name.
+# This section would typically be in a separate wrangler.toml in the worker's directory,
+# or you can manage multiple workers from a single wrangler.toml if using a monorepo setup.
+# For simplicity, here's what it would look like if it were a standalone worker.
+
+# If you want to deploy the worker separately:
+# Create a new directory, e.g., `verifier-worker/`
+# Put `worker.js` inside it.
+# Create a `wrangler.toml` inside `verifier-worker/` like this:
+
+# name = "farmlabs-verifier-backend" # Name for your Cloudflare Worker
+# main = "worker.js" # Path to your worker script relative to this wrangler.toml
+# compatibility_date = "2025-07-24"
+
+# IMPORTANT: You will need to deploy the Pages project and the Worker separately.
+# For Pages: `npx wrangler pages deploy public`
+# For Worker: `npx wrangler deploy` (from the worker's directory)
+# After deploying the worker, update the VERIFIER_BACKEND_URL in your HTML file
+# with the URL provided by Cloudflare for your worker.
