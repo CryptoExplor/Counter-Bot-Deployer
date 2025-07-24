@@ -706,6 +706,8 @@ contract Counter {
 
     /**
      * Determines if a transaction should be skipped based on gas price, estimated cost, and wallet balance.
+     * This function is primarily used by the deployer tab for its pre-flight checks.
+     * The farming bot now has its own explicit checks within processFarmingWallet.
      * @param {ethers.Wallet} wallet The wallet instance.
      * @param {ethers.providers.Provider} provider The provider connected to the network.
      * @param {ethers.BigNumber} estimatedGasLimit The estimated gas limit for the transaction.
@@ -791,20 +793,50 @@ contract Counter {
       let actionStatus = 'Failed'; // Default status for gas report
       let txHash = 'N/A';
 
-      try {
-        // Estimate gas limit for the specific action
-        const estimatedGasLimit = await runWithRetry(() => contract.estimateGas[action](), maxRetries, retryDelayMs);
-        log(`⛽ Gas estimate for ${action}: ${estimatedGasLimit.toString()} units`);
+      try { // Start of the new try block for checks
+        const feeData = await wallet.provider.getFeeData();
+        const gasPrice = feeData.maxFeePerGas || feeData.gasPrice;
+        const balance = await wallet.getBalance();
 
-        // Use the smart gas guard before proceeding
-        const skip = await shouldSkipTx(wallet, wallet.provider, estimatedGasLimit, maxGasPriceGwei, maxTxCostEth);
-        if (skip) {
-            actionStatus = 'Skipped (Gas Guard)';
-            return gasUsed; // Return 0 gas used, skip transaction
+        if (!gasPrice) {
+            log("⚠️ Could not fetch gas price. Skipping transaction.", 'warning');
+            actionStatus = 'Skipped (No Gas Price)';
+            return gasUsed;
         }
 
-        const countBefore = await runWithRetry(() => contract.count(), maxRetries, retryDelayMs);
-        log(`🔍 Wallet ${index + 1}${walletLabel} (${address.slice(0, 6)}...${address.slice(-4)}):\n   Current Count: ${countBefore.toString()}`);
+        // Estimate gas limit for the specific action
+        const estimatedGasLimit = await runWithRetry(() => contract.estimateGas[action](), maxRetries, retryDelayMs);
+        const estimatedCost = gasPrice.mul(estimatedGasLimit);
+
+        // Convert to human-readable for logging and comparison
+        const gwei = parseFloat(ethers.utils.formatUnits(gasPrice, "gwei"));
+        const costEth = parseFloat(ethers.utils.formatEther(estimatedCost));
+        const balanceEth = parseFloat(ethers.utils.formatEther(balance));
+
+        // Skip if gas price is too high
+        if (maxGasPriceGwei > 0 && gwei > maxGasPriceGwei) {
+          log(`⛽ Gas too high: ${gwei.toFixed(3)} gwei > ${maxGasPriceGwei} Gwei limit — Skipping Wallet ${index + 1}${walletLabel}`, 'warning');
+          actionStatus = 'Skipped (Gas Too High)';
+          return gasUsed;
+        }
+
+        // Skip if estimated transaction cost exceeds user's max ETH limit
+        if (maxTxCostEth > 0 && costEth > maxTxCostEth) {
+          log(`⚠️ Tx cost ${costEth.toFixed(6)} ETH > limit ${maxTxCostEth} ETH — Skipping Wallet ${index + 1}${walletLabel}`, 'warning');
+          actionStatus = 'Skipped (Tx Cost Too High)';
+          return gasUsed;
+        }
+
+        // Skip if wallet has insufficient funds
+        // Add a small buffer to the balance check to account for network fluctuations or minor gas changes
+        if (balance.lt(estimatedCost.add(ethers.utils.parseEther("0.0001")))) {
+          log(`💸 Wallet ${index + 1}${walletLabel} has insufficient funds (${balanceEth.toFixed(6)} ETH, needs approx. ${costEth.toFixed(6)} ETH) — Skipping`, 'warning');
+          actionStatus = 'Skipped (Low Balance)';
+          return gasUsed;
+        }
+
+        log(`⛽ Estimated cost: ${costEth.toFixed(6)} ETH | Wallet balance: ${balanceEth.toFixed(6)} ETH`, 'info');
+        log(`⛽ Gas estimate for ${action}: ${estimatedGasLimit.toString()} units`);
 
         if (Math.random() < 0.1) { // 10% chance for dummy read
             await runWithRetry(() => contract.count(), maxRetries, retryDelayMs);
