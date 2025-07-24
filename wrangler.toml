@@ -1,0 +1,11 @@
+name = "farmlabs-counter-bot"
+type = "webpack"
+
+[site]
+bucket = "./public"
+entry-point = "./"
+
+[build]
+command = ""
+
+compatibility_date = "2025-07-24"
