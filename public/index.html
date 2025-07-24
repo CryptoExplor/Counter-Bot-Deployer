@@ -347,7 +347,7 @@
       <div class="grid">
         <div class="input-group">
           <label for="bot-chain">🔗 Select Chain</label>
-          <select id="bot-chain">
+          <select id="bot-chain" onchange="updateRpcDropdown('bot')">
             <option value="base">Base Mainnet</option>
             <option value="linea">Linea Mainnet</option>
             <option value="scroll">Scroll Mainnet</option>
@@ -356,9 +356,11 @@
         </div>
 
         <div class="input-group">
-          <label for="bot-rpc">🌐 RPC URL (auto-filled by chain)</label>
-          <input id="bot-rpc" type="text" value="https://base.llamarpc.com" />
+          <label for="bot-rpc-select">🌐 Select RPC URL</label>
+          <select id="bot-rpc-select"></select>
         </div>
+        <!-- Hidden input to store the selected RPC URL -->
+        <input type="hidden" id="bot-rpc" />
 
         <div class="input-group span-2">
           <label for="bot-contract">📦 Counter Contract Address</label>
@@ -419,7 +421,7 @@
       <div class="grid">
         <div class="input-group">
           <label for="deployer-chain">🔗 Select Chain</label>
-          <select id="deployer-chain">
+          <select id="deployer-chain" onchange="updateRpcDropdown('deployer')">
             <option value="base">Base Mainnet</option>
             <option value="linea">Linea Mainnet</option>
             <option value="scroll">Scroll Mainnet</option>
@@ -428,9 +430,11 @@
         </div>
 
         <div class="input-group">
-          <label for="deployer-rpc">🌐 RPC URL (auto-filled by chain)</label>
-          <input id="deployer-rpc" value="https://mainnet.base.org">
+          <label for="deployer-rpc-select">🌐 Select RPC URL</label>
+          <select id="deployer-rpc-select"></select>
         </div>
+        <!-- Hidden input to store the selected RPC URL -->
+        <input type="hidden" id="deployer-rpc" />
 
         <div class="input-group span-2">
           <label for="deployer-pk">🔐 Private Key (never leaves browser)</label>
@@ -505,25 +509,33 @@
     // --- Chain Configurations ---
     const chainConfigs = {
       base: {
-        rpc: "https://mainnet.base.org",
+        rpcs: [
+          "https://mainnet.base.org",
+          "https://base.llamarpc.com",
+          "https://developer-access-mainnet.base.org",
+          "https://1rpc.io/base",
+          "https://base.publicnode.com",
+          // "https://base-mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID", // Uncomment and replace YOUR_INFURA_PROJECT_ID if you have one
+          // "https://base.gateway.tenderly.co" // Uncomment if you have a Tenderly gateway
+        ],
         name: "Base Mainnet",
         etherscanUrl: "https://basescan.org/address/",
         chainId: 8453
       },
       linea: {
-        rpc: "https://rpc.linea.build",
+        rpcs: ["https://rpc.linea.build"],
         name: "Linea Mainnet",
         etherscanUrl: "https://lineascan.build/address/",
         chainId: 59144
       },
       scroll: {
-        rpc: "https://rpc.scroll.io",
+        rpcs: ["https://rpc.scroll.io"],
         name: "Scroll Mainnet",
         etherscanUrl: "https://scrollscan.com/address/",
         chainId: 534352
       },
       sepolia: {
-        rpc: "https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID", // REMEMBER TO REPLACE THIS
+        rpcs: ["https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID"], // REMEMBER TO REPLACE THIS WITH YOUR ACTUAL INFURA PROJECT ID
         name: "Sepolia Testnet",
         etherscanUrl: "https://sepolia.etherscan.io/address/",
         chainId: 11155111
@@ -574,6 +586,34 @@
       document.getElementById("log").textContent = 'Logs:\n'; // Clear log on tab switch
     }
 
+    // --- RPC Dropdown Update Logic ---
+    function updateRpcDropdown(tabPrefix) {
+      const chainSelect = document.getElementById(`${tabPrefix}-chain`);
+      const rpcSelect = document.getElementById(`${tabPrefix}-rpc-select`);
+      const rpcHiddenInput = document.getElementById(`${tabPrefix}-rpc`);
+
+      const selectedChainId = chainSelect.value;
+      const rpcsForChain = chainConfigs[selectedChainId].rpcs;
+
+      // Clear existing options
+      rpcSelect.innerHTML = '';
+
+      // Add new options
+      rpcsForChain.forEach(rpcUrl => {
+        const option = document.createElement('option');
+        option.value = rpcUrl;
+        option.textContent = rpcUrl;
+        rpcSelect.appendChild(option);
+      });
+
+      // Set the hidden input value to the first RPC by default
+      if (rpcsForChain.length > 0) {
+        rpcHiddenInput.value = rpcsForChain[0];
+      } else {
+        rpcHiddenInput.value = '';
+      }
+    }
+
     // --- Counter Bot Logic ---
     let isFarmingBotRunning = false;
     let farmingBotStopFlag = false;
@@ -582,7 +622,7 @@
     function updateFarmingBotButtonStates(running) {
       document.getElementById("bot-startButton").disabled = running;
       document.getElementById("bot-stopButton").disabled = !running;
-      document.getElementById("bot-rpc").disabled = running;
+      document.getElementById("bot-rpc-select").disabled = running; // Disable RPC select
       document.getElementById("bot-contract").disabled = running;
       document.getElementById("bot-keys").disabled = running;
       document.getElementById("bot-maxRetries").disabled = running;
@@ -674,7 +714,9 @@
         return log("❌ Invalid chain selected.", 'error');
       }
 
-      const rpc = document.getElementById("bot-rpc").value.trim();
+      // Get RPC URL from the dropdown
+      const rpc = document.getElementById("bot-rpc-select").value.trim();
+      
       const contractAddress = document.getElementById("bot-contract").value.trim();
       const keysInput = document.getElementById("bot-keys").value.trim().split("\n").filter(k => k);
       const maxRetries = parseInt(document.getElementById("bot-maxRetries").value) || 1;
@@ -792,7 +834,7 @@
     function updateDeployerButtonStates(deploying) {
         document.getElementById("deployButton").disabled = deploying;
         document.getElementById("deployer-pk").disabled = deploying;
-        document.getElementById("deployer-rpc").disabled = deploying;
+        document.getElementById("deployer-rpc-select").disabled = deploying; // Disable RPC select
         document.getElementById("deployer-apikey").disabled = deploying;
         document.getElementById("deployer-chain").disabled = deploying; // Disable chain select
     }
@@ -810,7 +852,8 @@
       }
 
       let privateKey = document.getElementById("deployer-pk").value.trim();
-      const rpcUrl = document.getElementById("deployer-rpc").value.trim();
+      // Get RPC URL from the dropdown
+      const rpcUrl = document.getElementById("deployer-rpc-select").value.trim();
       const apiKey = document.getElementById("deployer-apikey").value.trim();
 
       document.getElementById("log").textContent = 'Logs:\n'; // Clear logs for new session
@@ -880,21 +923,22 @@
 
     // --- Initial Setup and Event Listeners ---
     document.addEventListener('DOMContentLoaded', () => {
-        // Initialize RPC fields based on default chain selection
-        document.getElementById('bot-rpc').value = chainConfigs[document.getElementById('bot-chain').value].rpc;
-        document.getElementById('deployer-rpc').value = chainConfigs[document.getElementById('deployer-chain').value].rpc;
+        // Initialize RPC dropdowns and hidden inputs
+        updateRpcDropdown('bot');
+        updateRpcDropdown('deployer');
 
-        // Add event listeners for chain selection to update RPC URL
-        document.getElementById('bot-chain').addEventListener('change', (event) => {
-            const selectedChain = event.target.value;
-            document.getElementById('bot-rpc').value = chainConfigs[selectedChain].rpc;
-            log(`Switched bot RPC to ${chainConfigs[selectedChain].name}: ${chainConfigs[selectedChain].rpc}`, 'info');
+        // Add event listeners for chain selection to update RPC dropdown
+        document.getElementById('bot-chain').addEventListener('change', () => updateRpcDropdown('bot'));
+        document.getElementById('deployer-chain').addEventListener('change', () => updateRpcDropdown('deployer'));
+
+        // Add event listeners for RPC dropdowns to update hidden RPC input
+        document.getElementById('bot-rpc-select').addEventListener('change', (event) => {
+            document.getElementById('bot-rpc').value = event.target.value;
+            log(`Bot RPC set to: ${event.target.value}`, 'info');
         });
-
-        document.getElementById('deployer-chain').addEventListener('change', (event) => {
-            const selectedChain = event.target.value;
-            document.getElementById('deployer-rpc').value = chainConfigs[selectedChain].rpc;
-            log(`Switched deployer RPC to ${chainConfigs[selectedChain].name}: ${chainConfigs[selectedChain].rpc}`, 'info');
+        document.getElementById('deployer-rpc-select').addEventListener('change', (event) => {
+            document.getElementById('deployer-rpc').value = event.target.value;
+            log(`Deployer RPC set to: ${event.target.value}`, 'info');
         });
 
         // --- Footer Logic (Copied and adapted from advance.html) ---
